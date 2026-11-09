@@ -88,4 +88,4 @@ npm run check     # 语法检查 + 自动化测试
 
 当前没有登录、鉴权、用户隔离、幂等键或分布式锁，不能直接暴露为生产服务。分页按插入顺序，每次写入全量保存 JSON。生产持久化可替换 Repository，接口和业务层不需要重新设计。
 
-阅读：[架构与接口](docs/architecture.md) · [五节实践课](docs/learning-path.md)。旧源码可能仍存在 Git 历史中，本次未改写历史或推送。
+阅读：[架构与接口](docs/architecture.md) · [五节实践课](docs/learning-path.md)。旧源码可能仍存在 Git 历史中，教学版发布未改写旧 Git 历史。
