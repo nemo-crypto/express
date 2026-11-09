@@ -1,17 +1,36 @@
 {
-  "name": "express-node",
-  "version": "0.0.0",
+  "name": "express-learning-api",
+  "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
-    "start": "node ./bin/www"
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check src/server.js && npm test"
   },
   "dependencies": {
-    "cookie-parser": "~1.4.4",
-    "debug": "~2.6.9",
-    "ejs": "~2.6.1",
-    "express": "~4.16.1",
-    "http-errors": "~1.6.3",
-    "morgan": "~1.9.1",
-    "mysql": "^2.17.1"
+    "express": "5.3.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4"
+  },
+  "description": "Express 5 + Node.js REST API tutorial with layered architecture, validation, error handling and JSON persistence. 后端教学 Demo：任务 CRUD、分页与 Supertest 测试。",
+  "keywords": [
+    "nodejs",
+    "express",
+    "rest-api",
+    "javascript",
+    "backend",
+    "layered-architecture",
+    "supertest",
+    "tutorial"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nemo-crypto/express.git"
   }
 }

@@ -1,51 +1,91 @@
-# Express + EJS + MySQL 示例
+# Express 5 · 分层 API 教学版
 
-使用 Express 4、EJS、cookie-parser 与 Morgan 的 Node.js 服务示例。当前包含首页模板、用户示例路由及 MySQL 操作演示，适合作为阅读中间件、路由和数据库调用流程的基础工程。
+以“学习任务”作为独立演示领域，讲解 **HTTP → 中间件 → 路由 → 服务 → 仓库**。旧 EJS/MySQL 启动写入逻辑已移除，不需要数据库账号，也不会在启动时写入业务数据库。
 
-## 结构与请求流程
+<!-- BEGIN project-discovery -->
+## 项目定位与实践入口
 
-| 路径 | 职责 |
-|---|---|
-| [bin/www](bin/www) | 创建 HTTP 服务、读取 PORT、处理监听错误 |
-| [app.js](app.js) | 中间件、静态资源、路由挂载及错误页面 |
-| [routes/index.js](routes/index.js) | 首页与启动时执行的数据库示例 |
-| [routes/users.js](routes/users.js) | GET /users 示例响应 |
-| `views/` | EJS页面与错误模板 |
-| `public/` | 静态资源 |
+Express 5 + Node.js REST API tutorial with layered architecture, validation, error handling and JSON persistence. 后端教学 Demo：任务 CRUD、分页与 Supertest 测试。
 
-请求依次经过日志、JSON/表单解析、Cookie和静态资源中间件，再进入路由；未匹配请求转为404并通过EJS错误页返回。当前错误响应并非统一JSON API格式。
+适合从以下入口阅读实现与接入条件：
 
-## 启动前置条件
+- [HTTP 应用装配](src/app.js)
+- [业务服务](src/services/task-service.js)
+- [存储适配](src/repositories/)
+<!-- END project-discovery -->
 
-需要 Node.js、npm 与可访问的 MySQL 实例。工程未声明 Node engines，历史依赖兼容性需在实际环境确认。
+## 启动
 
-**当前 `routes/index.js` 在模块加载时连接MySQL、插入示例记录并查询 `userlist`，不是收到首页请求后才执行。** 启动前应检查其中的数据库连接配置，准备独立测试数据库和表，避免重复启动向业务数据库写入数据。查询示例的错误处理也不完整，数据库异常可能阻止应用正常运行。
+Node.js 22.12+，推荐 24。
 
-代码依赖的 `userlist` 字段包括 `username`、`password`、`country`；目录没有提供数据库迁移或完整建表脚本。文档不补写未经核实的生产表结构。
-
-## 安装与运行
-
-在项目目录执行：
-
-```bash
+```sh
 npm ci
 npm start
 ```
 
-默认地址为 `http://localhost:3000`。覆盖端口示例：
+访问 http://127.0.0.1:3000 或 `/health`。默认内存存储，重启后清空。启动时可选择本地文件持久化：
 
-```bash
-PORT=3001 npm start
+```sh
+DATA_FILE=./data/tasks.json PORT=3001 npm start
 ```
 
-| 方法 | 路径 | 当前行为 |
-|---|---|---|
-| GET | `/` | 渲染首页EJS模板 |
-| GET | `/users` | 返回固定示例文本 |
-| GET | 未注册路径 | 返回404错误页面 |
+服务只监听回环地址，面向本地学习。环境变量不从 .env 自动加载。所有演示数据都由你主动通过接口创建，没有自动插入数据。
 
-## 接入与维护
+## 请求示例
 
-业务扩展应把数据库初始化、请求处理和资源关闭分开维护，真实连接参数由宿主环境管理。当前依赖列表有MySQL驱动，但没有完整账户认证、数据库迁移或业务API测试框架。
+```sh
+curl -i http://127.0.0.1:3000/api/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"学习 Express 中间件"}'
 
-`package.json` 只有 start 脚本，没有 build、lint 或 test 命令。可在独立测试数据库中人工检查首页、用户路由、404、端口和连接错误；本轮只做静态核对，未启动数据库或执行写操作。
+curl 'http://127.0.0.1:3000/api/tasks?completed=false&limit=20&offset=0'
+
+# 将 TASK_ID 替换为创建接口返回的 id
+curl -X PATCH http://127.0.0.1:3000/api/tasks/TASK_ID \
+  -H 'Content-Type: application/json' -d '{"completed":true}'
+
+curl -X DELETE http://127.0.0.1:3000/api/tasks/TASK_ID
+```
+
+| 方法 | 路径 | 行为 |
+| --- | --- | --- |
+| GET | /health | 健康状态 |
+| GET | /api | 接口导航 |
+| GET | /api/tasks | 过滤和分页查询 |
+| GET | /api/tasks/:id | 单条任务 |
+| POST | /api/tasks | 创建，返回 201 与 Location |
+| PATCH | /api/tasks/:id | 修改 title/completed |
+| DELETE | /api/tasks/:id | 删除，返回 204 |
+
+输入拒绝未知字段、空标题、非布尔 completed、非法分页及超过 16KB 的请求。任务最多 1000 条；title 为 1–100 个字符。
+
+## 分层
+
+```text
+src/app.js                    Express 装配、路由和统一错误处理
+src/server.js                 监听配置、生命周期和优雅关闭
+src/domain/task.js            错误类型、请求与查询校验
+src/services/task-service.js  业务流程，不负责监听端口
+src/repositories/             内存/JSON 文件存储契约
+tests/                        HTTP 行为和存储测试
+```
+
+Express 5 会把异步路由抛出的异常转交错误中间件。公开错误形如 `{ "error": { "code", "message", "requestId" } }`；内部异常不向客户端回传堆栈或数据库内容。
+
+## 开发验证
+
+```sh
+npm run dev       # Node 内置 watch
+npm test          # Supertest + node:test
+npm run check     # 语法检查 + 自动化测试
+```
+
+测试覆盖 CRUD、校验、分页、统一错误、Express 5 异步失败、并发文件写入、重启读取、损坏保护和文件锁。Supertest 使用独立内存或临时目录，不使用真实数据库。
+
+## 教学边界
+
+文件仓库通过串行写队列、同目录临时文件和 rename 避免丢失并发更新。独占 `.lock` 防止多进程写同一文件；正常退出释放锁，崩溃后的锁需确认无运行实例后手动清理。损坏文件不会被自动重置。仅适合小规模、单进程 Demo，不是生产数据库。
+
+当前没有登录、鉴权、用户隔离、幂等键或分布式锁，不能直接暴露为生产服务。分页按插入顺序，每次写入全量保存 JSON。生产持久化可替换 Repository，接口和业务层不需要重新设计。
+
+阅读：[架构与接口](docs/architecture.md) · [五节实践课](docs/learning-path.md)。旧源码可能仍存在 Git 历史中，本次未改写历史或推送。
