@@ -2,8 +2,10 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { AppError } from './domain/task.js';
 import { TaskService } from './services/task-service.js';
+import { createDexRouter } from './dex/router.js';
+import { fileURLToPath } from 'node:url';
 
-export function createApp({ repository, logger = console } = {}) {
+export function createApp({ repository, logger = console, dexRuntime, dexToken } = {}) {
   if (!repository) throw new Error('必须注入 repository');
   const app = express(); const service = new TaskService(repository);
   app.disable('x-powered-by'); app.set('query parser', 'simple');
@@ -24,6 +26,13 @@ export function createApp({ repository, logger = console } = {}) {
   app.post('/api/tasks', async (req, res) => { const task = await service.create(req.body); res.status(201).location(`/api/tasks/${task.id}`).json(task); });
   app.patch('/api/tasks/:id', async (req, res) => res.json(await service.update(req.params.id, req.body)));
   app.delete('/api/tasks/:id', async (req, res) => { await service.remove(req.params.id); res.status(204).end(); });
+  if (dexRuntime) {
+    app.use('/api/dex', createDexRouter(dexRuntime, { token: dexToken }));
+    app.use('/dex-demo', (_req, res, next) => {
+      res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+      next();
+    }, express.static(fileURLToPath(new URL('./dex/public', import.meta.url))));
+  }
   app.use((_req, _res, next) => next(new AppError(404, 'ROUTE_NOT_FOUND', '接口不存在')));
   app.use((error, req, res, _next) => {
     if (res.headersSent) return _next(error);

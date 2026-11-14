@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>DEX Lab · Node.js 链上交易 Demo</title>
+  <link rel="stylesheet" href="/dex-demo/style.css">
+  <script src="/dex-demo/app.js" defer></script>
+</head>
+<body>
+<header><div><span class="eyebrow">NODE.JS / EXPRESS / LOCAL SIMULATION</span><h1>DEX 交易实验室</h1><p>从行情订阅到订单确认，观察每一步如何执行与恢复。</p></div><span class="badge">本地模拟 · 不连接真实链</span></header>
+<main>
+  <section class="toolbar" aria-label="演示授权">
+    <label>Demo Token <input id="token" type="password" value="demo-local-token" maxlength="256" autocomplete="off"></label>
+    <button id="refresh" type="button">连接并刷新</button>
+    <span id="connection" role="status">行情连接中</span>
+  </section>
+  <p id="notice" role="status" aria-live="polite">开启自动推进后，每秒产生一个模拟区块。精确演练可设置 DEX_AUTO_TICK=false。</p>
+  <div class="grid">
+    <section class="card"><span class="step">01 / MARKET DATA</span><h2>行情与池快照</h2>
+      <div class="actions"><button id="disconnect" type="button">断开上游</button><button id="reconnect" type="button">重连补数</button><button id="tick" type="button">推进 1 个区块</button></div>
+      <pre id="market">等待行情快照…</pre>
+    </section>
+    <section class="card"><span class="step">02 / QUOTE & EXECUTE</span><h2>报价与模拟交易</h2>
+      <form id="quote-form">
+        <label>交易方向<select id="pair"><option value="WETH">WETH → USDC</option><option value="USDC">USDC → WETH</option></select></label>
+        <div class="fields"><label>输入数量<input id="amount" value="0.1" inputmode="decimal" maxlength="80" required></label><label>滑点（bps）<input id="slippage" type="number" min="0" max="1000" value="100" required></label></div>
+        <div class="actions"><button type="submit" class="primary">获取最优报价</button><button id="trade" type="button" disabled>确认模拟交易</button></div>
+      </form>
+      <pre id="quote">输入金额使用字符串，内部使用 BigInt。</pre>
+    </section>
+    <section class="card"><span class="step">03 / FAULT INJECTION</span><h2>交易故障演练</h2>
+      <label>下一次广播场景<select id="scenario"><option value="normal">正常</option><option value="rpc-timeout">RPC 超时（接收前）</option><option value="ack-lost">节点接收后回执丢失</option><option value="revert">链上回滚</option><option value="slippage">成交前价格变化</option><option value="stuck">交易卡住</option></select></label>
+      <button id="inject" type="button">设置下一次场景</button>
+      <p class="muted">先设置场景，再获取报价并提交。故障作用于全局下一次首次广播。</p>
+      <div class="fields"><label>需处理的订单 ID<input id="order-id" autocomplete="off"></label><label>卡住的交易 hash<input id="tx-hash" autocomplete="off"></label></div>
+      <div class="actions"><button id="unstick" type="button">解除模拟卡住</button><button id="reconcile" type="button">恢复原 hash 追踪</button></div>
+    </section>
+    <section class="card"><span class="step">04 / POLICY & AUDIT</span><h2>策略灰度与配置回滚</h2>
+      <form id="config-form">
+        <label class="check"><input id="enabled" type="checkbox" checked>允许新交易广播</label>
+        <div class="fields"><label>灰度百分比<input id="rollout" type="number" min="0" max="100" value="100" required></label><label>最大滑点（bps）<input id="max-slip" type="number" min="0" max="1000" value="300" required></label></div>
+        <div class="actions"><button type="submit">保存新版本</button><select id="versions" aria-label="回滚版本"></select><button id="rollback" type="button">回滚为所选配置</button></div>
+      </form>
+      <p id="config-version" class="muted">尚未读取配置</p>
+    </section>
+  </div>
+  <section class="card wide"><span class="step">05 / ORDERS</span><h2>订单状态</h2><p class="muted">点击订单可填入人工核验区域；attention 表示需要核验，不等于交易失败。</p><div class="table-wrap"><table><thead><tr><th>订单</th><th>状态</th><th>广播次数</th><th>原因</th><th>交易 hash</th></tr></thead><tbody id="orders"></tbody></table></div></section>
+  <div class="grid"><section class="card"><span class="step">06 / OBSERVABILITY</span><h2>监控与告警</h2><pre id="overview">等待授权后读取…</pre></section><section class="card"><span class="step">AUDIT TRAIL</span><h2>操作审计</h2><pre id="audit">等待授权后读取…</pre></section></div>
+</main>
+<footer>模拟池、模拟签名、模拟 gas。真实 RPC、链重组、余额、nonce 与生产鉴权不在本 Demo 中。</footer>
+</body>
+</html>

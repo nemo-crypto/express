@@ -10,7 +10,8 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/server.js && npm test"
+    "check": "node --check src/server.js && npm test",
+    "demo:dex": "node scripts/dex-demo.mjs"
   },
   "dependencies": {
     "express": "5.3.0"
