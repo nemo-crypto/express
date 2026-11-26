@@ -22,7 +22,7 @@ function validateEvent(event, now) {
 /** 模拟上游订阅。断开时上游仍产块，重连从有界历史中补齐连续序号。 */
 export class MarketRuntime extends EventEmitter {
   #pending = Promise.resolve();
-  constructor(store, chain, now) { super(); this.store = store; this.chain = chain; this.now = now; this.connected = true; }
+  constructor(store, chain, now, logger = console) { super(); this.store = store; this.chain = chain; this.now = now; this.logger = logger; this.connected = true; }
   ingest(event) {
     const operation = this.#pending.then(async () => {
       try {
@@ -48,7 +48,7 @@ export class MarketRuntime extends EventEmitter {
           state.market.backfilled += events.length - 1;
           return true;
         });
-        if (applied) this.emit('snapshot', await this.snapshot());
+        if (applied) this.publishSnapshot(await this.snapshot());
         return this.snapshot();
       } catch (error) {
         await this.store.change((state) => { state.market.rejected++; });
@@ -57,6 +57,15 @@ export class MarketRuntime extends EventEmitter {
     });
     this.#pending = operation.catch(() => {});
     return operation;
+  }
+  publishSnapshot(snapshot) {
+    const report = () => {
+      // 订阅者异常不能回滚已提交行情，也不记录任意异常内容。
+      try { this.logger.error?.(JSON.stringify({ event: 'dex.market.subscriber.failed', code: 'SUBSCRIBER_ERROR' })); } catch {}
+    };
+    for (const listener of this.rawListeners('snapshot')) {
+      try { Promise.resolve(listener.call(this, snapshot)).catch(report); } catch { report(); }
+    }
   }
   async produce() {
     const mined = await this.chain.mine();
