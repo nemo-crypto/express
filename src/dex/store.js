@@ -40,15 +40,17 @@ export class DexStore {
       const next = structuredClone(this.#state);
       const result = callback(next);
       if (result instanceof Promise) throw new Error('存储事务不能包含异步副作用');
+      const returned = structuredClone(result);
+      const committed = structuredClone(next);
       if (this.#file) {
         const temporary = `${this.#file}.${randomUUID()}.tmp`;
         try {
-          await writeFile(temporary, JSON.stringify(next), { mode: 0o600, flag: 'wx' });
+          await writeFile(temporary, JSON.stringify(committed), { mode: 0o600, flag: 'wx' });
           await rename(temporary, this.#file);
         } finally { await unlink(temporary).catch((error) => { if (error.code !== 'ENOENT') throw error; }); }
       }
-      this.#state = next;
-      return structuredClone(result);
+      this.#state = committed;
+      return returned;
     });
     this.#pending = operation.catch(() => {});
     return operation;
