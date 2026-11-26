@@ -11,3 +11,17 @@ test('concurrent ticks share one block advance and return the same overview', as
     assert.deepEqual(results[1], results[2]);
   } finally {await runtime.close();}
 });
+
+test('a failed tick rejects all waiters and the next tick can recover', async () => {
+  const runtime = await createDexRuntime({now: () => 1000});
+  const produce = runtime.market.produce.bind(runtime.market);
+  const failure = new Error('simulated producer failure');
+  try {
+    runtime.market.produce = async () => {throw failure;};
+    const results = await Promise.allSettled([runtime.tick(), runtime.tick()]);
+    assert.ok(results.every(result => result.status === 'rejected' && result.reason === failure));
+    runtime.market.produce = produce;
+    const overview = await runtime.tick();
+    assert.equal(typeof overview.block, 'number');
+  } finally {await runtime.close();}
+});
