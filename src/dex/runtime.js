@@ -24,9 +24,9 @@ export async function createDexRuntime({ file, now = Date.now, logger = console 
         await market.produce();
         await trading.processAll();
         workerError = null;
+        return runtime.overview();
       })();
-      try { await running; } finally { running = null; }
-      return runtime.overview();
+      try { return await running; } finally { running = null; }
     },
     start() {
       if (timer || closed) return;
