@@ -7,7 +7,7 @@ import { TradingService } from './trading.js';
 export async function createDexRuntime({ file, now = Date.now, logger = console } = {}) {
   const store = await DexStore.open(file);
   const chain = new MockChain(store, now);
-  const market = new MarketRuntime(store, chain, now);
+  const market = new MarketRuntime(store, chain, now, logger);
   market.setMaxListeners(20);
   const trading = new TradingService(store, chain, new MockSigner(), now);
   let timer = null;
