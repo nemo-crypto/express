@@ -33,3 +33,19 @@ test('disconnecting while the initial snapshot loads leaves no stream subscripti
     assert.equal(f.market.listenerCount('shutdown'), 0);
   } finally {req.destroy(); f.market.removeAllListeners(); await f.close();}
 });
+
+test('active streams receive their initial event and release listeners on disconnect', async () => {
+  const f = await fixture(async () => ({sequence: 7}));
+  let req;
+  const closed = new Promise(resolve => f.server.on('request', (_req, res) => res.once('close', resolve)));
+  try {
+    const response = await new Promise((resolve, reject) => {req = get(f.url, resolve); req.on('error', reject);});
+    const [chunk] = await once(response, 'data');
+    assert.match(chunk.toString(), /id: 7\nevent: market/);
+    assert.equal(f.market.listenerCount('snapshot'), 1);
+    response.destroy(); req.destroy();
+    await closed;
+    assert.equal(f.market.listenerCount('snapshot'), 0);
+    assert.equal(f.market.listenerCount('shutdown'), 0);
+  } finally {req?.destroy(); f.market.removeAllListeners(); await f.close();}
+});
