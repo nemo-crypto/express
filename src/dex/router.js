@@ -23,6 +23,8 @@ export function createDexRouter(runtime, { token = 'demo-local-token' } = {}) {
   router.get('/market/stream', async (req, res) => {
     if (streams >= 20) fail(429, 'STREAM_LIMIT', '最多 20 个行情流');
     const initial = await runtime.market.snapshot();
+    // 等待快照期间客户端可能已经断开，此时不能再占用名额或安装监听器。
+    if (res.destroyed || res.writableEnded) return;
     // await 后再次检查，避免并行连接绕过上限。
     if (streams >= 20) fail(429, 'STREAM_LIMIT', '最多 20 个行情流');
     streams++;
